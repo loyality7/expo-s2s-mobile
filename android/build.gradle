@@ -6,13 +6,34 @@ plugins {
 group = 'expo.modules.s2smobile'
 version = '0.1.0'
 
+repositories {
+  google()
+  mavenCentral()
+  maven { url 'https://jitpack.io' }
+}
+
 android {
   namespace "expo.modules.s2smobile"
   defaultConfig {
     versionCode 1
     versionName "0.1.0"
+    consumerProguardFiles 'consumer-rules.pro'
   }
   lintOptions {
     abortOnError false
   }
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+}
+
+dependencies {
+  implementation 'com.github.loyality7:speech-to-speech-mobile:1.0.0'
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
+
+  testImplementation 'junit:junit:4.13.2'
+  testImplementation 'io.mockk:mockk:1.13.8'
+  testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'
 }

@@ -4,6 +4,7 @@
   "description": "Expo/React Native wrapper for Speech-to-Speech Mobile SDK",
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "plugin": "app.plugin.js",
   "scripts": {
     "build": "node internal/module_scripts/build.js",
     "clean": "node internal/module_scripts/clean.js",
@@ -19,32 +20,37 @@
     "expo-s2s-mobile",
     "S2SMobile"
   ],
-  "repository": "https://github.com/loyality7/speech-to-speech-mobile",
+  "repository": "https://github.com/loyality7/expo-s2s-mobile",
   "bugs": {
-    "url": "https://github.com/loyality7/speech-to-speech-mobile/issues"
+    "url": "https://github.com/loyality7/expo-s2s-mobile/issues"
   },
   "author": "loyality7 <sarathyadav112@gmail.com> (https://github.com/loyality7)",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/loyality7/speech-to-speech-mobile#readme",
-  "dependencies": {},
+  "homepage": "https://github.com/loyality7/expo-s2s-mobile#readme",
   "devDependencies": {
     "@babel/core": "^7.26.0",
     "@types/jest": "^29.2.1",
     "@types/react": "~19.1.1",
-    "babel-preset-expo": "~55.0.8",
+    "babel-preset-expo": "~57.0.0",
     "eslint": "~9.39.4",
     "eslint-config-universe": "^15.0.3",
     "expo": "^57.0.15",
+    "expo-modules-core": "^57.0.12",
     "jest": "^29.7.0",
-    "jest-expo": "~55.0.9",
+    "jest-expo": "~57.0.0",
     "prettier": "^3.0.0",
     "react-native": "0.82.1",
+    "ts-jest": "^29.4.12",
     "typescript": "^5.9.2"
   },
   "jest": {
-    "preset": "jest-expo",
+    "preset": "ts-jest",
+    "testEnvironment": "node",
     "roots": [
       "<rootDir>/src"
+    ],
+    "setupFiles": [
+      "<rootDir>/jest.setup.js"
     ]
   },
   "peerDependencies": {
