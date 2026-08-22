@@ -1,0 +1,6 @@
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": ["expo.modules.s2smobile.S2SMobileModule"]
+  }
+}
