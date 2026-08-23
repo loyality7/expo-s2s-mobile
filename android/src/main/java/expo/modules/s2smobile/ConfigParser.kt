@@ -9,11 +9,11 @@ import com.s2s.mobile.config.TtsConfig
 import com.s2s.mobile.config.VadConfig
 import com.s2s.mobile.pipeline.GenerationOverrides
 import com.s2s.mobile.pipeline.LlmBackend
-import com.s2s.mobile.pipeline.SttBackend
+import com.s2s.mobile.config.SttBackend
 import com.s2s.mobile.pipeline.ToolDefinition
 import com.s2s.mobile.pipeline.ToolParameter
 import com.s2s.mobile.pipeline.TtsBackend
-import com.s2s.mobile.pipeline.VadBackend
+import com.s2s.mobile.config.VadBackend
 
 object ConfigParser {
 
@@ -121,10 +121,7 @@ object ConfigParser {
       compactHistory = llmMap["compactHistory"] as? Boolean ?: true,
       reuseKvCache = llmMap["reuseKvCache"] as? Boolean ?: true,
       toolsEnabled = llmMap["toolsEnabled"] as? Boolean ?: false,
-      backend = when (llmMap["backend"] as? String) {
-        "LITERT" -> LlmBackend.LITERT
-        else -> LlmBackend.LLAMA_CPP
-      }
+      backend = LlmBackend.LLAMA_CPP
     ) else LlmConfig()
 
     val ttsMap = map["tts"] as? Map<String, Any?>

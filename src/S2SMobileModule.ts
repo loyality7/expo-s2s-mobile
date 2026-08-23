@@ -31,7 +31,7 @@ declare class S2SMobileModule extends NativeModule<S2SMobileModuleEvents> {
   resolveToolExecution(callId: string, result: string, isError?: boolean): void;
   onTrimMemory(level: number): void;
   getInstalledModelsAsync(): Promise<InstalledModelInfo[]>;
-  downloadModelsAsync(huggingFaceToken?: string): Promise<void>;
+  downloadModelsAsync(modelIds?: string[] | null, huggingFaceToken?: string): Promise<void>;
   useCustomModelRegistry(jsonString: string): void;
   useDefaultModelRegistry(): void;
   cancelModelDownload(): void;

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-
-import { addS2SListener, cancelModelDownload, downloadModelsAsync, getInstalledModelsAsync } from './index';
+import S2SMobileModule from './S2SMobileModule';
 import { InstalledModelInfo, ModelDownloadProgressPayload } from './types';
 
 export interface UseS2SModelDownloaderResult {
@@ -21,7 +20,7 @@ export function useS2SModelDownloader(): UseS2SModelDownloaderResult {
 
   const refreshInstalledModels = useCallback(async () => {
     try {
-      const models = await getInstalledModelsAsync();
+      const models = await S2SMobileModule.getInstalledModelsAsync();
       setInstalledModels(models);
       return models;
     } catch (err: any) {
@@ -33,7 +32,7 @@ export function useS2SModelDownloader(): UseS2SModelDownloaderResult {
   useEffect(() => {
     refreshInstalledModels();
 
-    const sub = addS2SListener('onModelDownloadProgress', (progress) => {
+    const sub = S2SMobileModule.addListener('onModelDownloadProgress', (progress: ModelDownloadProgressPayload) => {
       setDownloadProgress(progress);
       if (progress.status === 'COMPLETED') {
         setIsDownloading(false);
@@ -52,7 +51,7 @@ export function useS2SModelDownloader(): UseS2SModelDownloaderResult {
     setIsDownloading(true);
     setError(null);
     try {
-      await downloadModelsAsync(huggingFaceToken);
+      await S2SMobileModule.downloadModelsAsync(huggingFaceToken);
       await refreshInstalledModels();
     } catch (err: any) {
       setError(err?.message || 'Model download failed');
@@ -62,7 +61,7 @@ export function useS2SModelDownloader(): UseS2SModelDownloaderResult {
   }, [refreshInstalledModels]);
 
   const cancel = useCallback(() => {
-    cancelModelDownload();
+    S2SMobileModule.cancelModelDownload();
     setIsDownloading(false);
   }, []);
 

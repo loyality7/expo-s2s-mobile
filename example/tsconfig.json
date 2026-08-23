@@ -1,10 +1,4 @@
 {
-  "extends": "expo/tsconfig.base",
-  "compilerOptions": {
-    "strict": true,
-    "paths": {
-      "expo-s2s-mobile": ["../src/index"],
-      "expo-s2s-mobile/*": ["../src/*"]
-    }
-  }
+  "compilerOptions": {},
+  "extends": "expo/tsconfig.base"
 }
