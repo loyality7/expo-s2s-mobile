@@ -1,209 +1,115 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Platform } from 'react-native';
-import { useS2S } from '../state/S2SContext';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  addS2SListener,
+  getInstalledModelsAsync,
+  isHardwareAecActive,
+  isHardwareNoiseSuppressionActive,
+} from 'expo-s2s-mobile';
+import { colors, spacing, typography } from '../theme/theme';
+import { Header } from '../components/Header';
+import { useS2SContext } from '../context/S2SContext';
+import { formatBytes } from '../utils/formatBytes';
+import { formatMs } from '../utils/formatDuration';
 
-export const DiagnosticsScreen = () => {
-  const { 
-    setCurrentScreen, engineState, s2sState, lastError, installedModels,
-    events, eventsPaused, setEventsPaused, setEvents,
-    releaseEngine, resetConversation, onTrimMemory, cancelModelDownload,
-    isHardwareAecActive, isHardwareNoiseSuppressionActive
-  } = useS2S();
+function Row({ label, value }) {
+  return (
+    <View style={styles.row}>
+      <Text style={typography.caption}>{label}</Text>
+      <Text style={[typography.bodySecondary, { textAlign: 'right', flex: 1, marginLeft: spacing.md }]}>{value}</Text>
+    </View>
+  );
+}
+
+export function DiagnosticsScreen({ onBack }) {
+  const { s2s, appState, bootError } = useS2SContext();
+  const [models, setModels] = useState([]);
+  const [metrics, setMetrics] = useState(null);
+  const [rawErrors, setRawErrors] = useState([]);
+  const [hwStatus, setHwStatus] = useState({ aec: false, ns: false });
+
+  useEffect(() => {
+    getInstalledModelsAsync().then(setModels).catch(() => {});
+    try {
+      setHwStatus({ aec: isHardwareAecActive(), ns: isHardwareNoiseSuppressionActive() });
+    } catch {}
+
+    const subs = [
+      addS2SListener('onMetrics', (data) => setMetrics(data.metrics)),
+      addS2SListener('onError', (data) =>
+        setRawErrors((prev) => [{ message: data.message, cause: data.cause, time: Date.now() }, ...prev].slice(0, 20))
+      ),
+    ];
+    return () => subs.forEach((s) => s.remove());
+  }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => setCurrentScreen('SETTINGS')} style={styles.backBtn}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Diagnostics & JNI Log</Text>
-        <View style={{ width: 30 }} />
-      </View>
+    <SafeAreaView style={styles.wrap} edges={['top', 'bottom']}>
+      <Header title="Diagnostics" onSettingsPress={null} onResetPress={null} />
+      <Pressable onPress={onBack} style={styles.backRow} hitSlop={10}>
+        <Text style={[typography.body, { color: colors.accent }]}>← Back</Text>
+      </Pressable>
 
-      <ScrollView style={styles.scroll}>
-        <Text style={styles.sectionTitle}>SDK & NATIVE ENGINE STATUS</Text>
-        <View style={styles.card}>
-          <Text style={styles.codeText}>Engine State: {engineState}</Text>
-          <Text style={styles.codeText}>S2S State: {s2sState}</Text>
-          <Text style={styles.codeText}>Platform: {Platform.OS} (v{Platform.Version})</Text>
-          <Text style={styles.codeText}>Hardware AEC: {isHardwareAecActive() ? 'Active' : 'Inactive'}</Text>
-          <Text style={styles.codeText}>Hardware Noise Suppression: {isHardwareNoiseSuppressionActive() ? 'Active' : 'Inactive'}</Text>
-          {lastError ? (
-            <Text style={[styles.codeText, { color: '#F87171', marginTop: 6 }]}>
-              Last Error: {lastError.message} ({lastError.time})
-            </Text>
-          ) : null}
+      <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.lg }}>
+        <View>
+          <Text style={styles.sectionTitle}>Engine</Text>
+          <Row label="App state" value={appState} />
+          <Row label="Voice state" value={s2s.voiceState} />
+          <Row label="Running" value={s2s.running ? 'yes' : 'no'} />
+          {bootError ? <Row label="Boot error" value={bootError} /> : null}
         </View>
 
-        <Text style={styles.sectionTitle}>MODEL REGISTRY CATALOG</Text>
-        <View style={styles.card}>
-          {installedModels.length === 0 ? (
-            <Text style={styles.codeText}>No models queried.</Text>
-          ) : (
-            installedModels.map((m, idx) => (
-              <View key={m.id || idx} style={styles.modelItem}>
-                <Text style={styles.codeText}>• {m.name || m.id} ({m.category || 'N/A'})</Text>
-                <Text style={styles.subCodeText}>Installed: {m.isInstalled ? 'YES' : 'NO'} | Path: {m.path || 'N/A'}</Text>
-              </View>
-            ))
-          )}
+        <View>
+          <Text style={styles.sectionTitle}>Audio hardware</Text>
+          <Row label="Hardware echo cancellation" value={hwStatus.aec ? 'active' : 'inactive'} />
+          <Row label="Hardware noise suppression" value={hwStatus.ns ? 'active' : 'inactive'} />
         </View>
 
-        <Text style={styles.sectionTitle}>DIRECTIVE CONTROLS</Text>
-        <View style={styles.btnGrid}>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => setCurrentScreen('PERMISSIONS')}>
-            <Text style={styles.actionText}>Run Setup Flow</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionBtn} onPress={releaseEngine}>
-            <Text style={styles.actionText}>Release Engine</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionBtn} onPress={resetConversation}>
-            <Text style={styles.actionText}>Reset Chat</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionBtn} onPress={() => onTrimMemory(10)}>
-            <Text style={styles.actionText}>Trim Memory</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionBtn} onPress={cancelModelDownload}>
-            <Text style={styles.actionText}>Cancel Downloads</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.eventHeader}>
-          <Text style={styles.sectionTitle}>RAW EVENT STREAM ({events.length})</Text>
-          <View style={styles.eventControls}>
-            <TouchableOpacity onPress={() => setEventsPaused(!eventsPaused)}>
-              <Text style={styles.ctrlText}>{eventsPaused ? 'Resume' : 'Pause'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setEvents([])} style={{ marginLeft: 12 }}>
-              <Text style={styles.ctrlText}>Clear</Text>
-            </TouchableOpacity>
+        {metrics ? (
+          <View>
+            <Text style={styles.sectionTitle}>Last turn latency</Text>
+            <Row label="Time to first token" value={formatMs(metrics.timeToFirstTokenMs)} />
+            <Row label="Time to first audio" value={formatMs(metrics.timeToFirstAudioMs)} />
           </View>
+        ) : null}
+
+        <View>
+          <Text style={styles.sectionTitle}>Models ({models.length})</Text>
+          {models.map((m) => (
+            <Row
+              key={m.id}
+              label={m.name}
+              value={m.isInstalled ? formatBytes(m.diskUsageBytes) : 'not installed'}
+            />
+          ))}
         </View>
 
-        <View style={styles.logBox}>
-          {events.length === 0 ? (
-            <Text style={styles.logText}>No native events captured yet.</Text>
-          ) : (
-            events.map((e, idx) => (
-              <Text key={idx} style={styles.logText}>
-                {e.time} | <Text style={styles.eventName}>{e.eventName}</Text>: {e.payloadSummary}
-              </Text>
-            ))
-          )}
-        </View>
-
-        <View style={{ height: 40 }} />
+        {rawErrors.length > 0 ? (
+          <View>
+            <Text style={styles.sectionTitle}>Recent errors</Text>
+            {rawErrors.map((e, i) => (
+              <View key={i} style={{ marginBottom: spacing.sm }}>
+                <Text style={[typography.bodySecondary, { color: colors.danger }]}>{e.message}</Text>
+                {e.cause ? <Text style={typography.caption}>{e.cause}</Text> : null}
+              </View>
+            ))}
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#090A0C',
-  },
-  header: {
+  wrap: { flex: 1, backgroundColor: colors.bg },
+  backRow: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  sectionTitle: { ...typography.caption, textTransform: 'uppercase', marginBottom: spacing.xs },
+  row: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1F2937',
-  },
-  backBtn: {
-    padding: 4,
-  },
-  backIcon: {
-    fontSize: 24,
-    color: '#FFF',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  scroll: {
-    flex: 1,
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#7B61FF',
-    marginBottom: 8,
-    marginTop: 16,
-    letterSpacing: 1,
-  },
-  card: {
-    backgroundColor: '#1A1C23',
-    borderRadius: 12,
-    padding: 14,
-  },
-  codeText: {
-    color: '#E5E7EB',
-    fontSize: 13,
-    marginBottom: 4,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  subCodeText: {
-    color: '#9CA3AF',
-    fontSize: 11,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  modelItem: {
-    marginBottom: 8,
-  },
-  btnGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  actionBtn: {
-    backgroundColor: '#262933',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  actionText: {
-    color: '#E5E7EB',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  eventHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  eventControls: {
-    flexDirection: 'row',
-  },
-  ctrlText: {
-    color: '#7B61FF',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  logBox: {
-    backgroundColor: '#000000',
-    padding: 12,
-    borderRadius: 12,
-    minHeight: 220,
-    maxHeight: 400,
-  },
-  logText: {
-    color: '#A0A0A0',
-    fontSize: 11,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    marginBottom: 4,
-  },
-  eventName: {
-    color: '#3B82F6',
-    fontWeight: 'bold',
+    paddingVertical: spacing.xs,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.divider,
   },
 });
