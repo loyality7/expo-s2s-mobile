@@ -2,6 +2,7 @@ package expo.modules.s2smobile
 
 import com.s2s.mobile.config.AudioConfig
 import com.s2s.mobile.config.LlmConfig
+import com.s2s.mobile.config.ModelDownloadConfig
 import com.s2s.mobile.config.ModelPaths
 import com.s2s.mobile.config.S2SConfig
 import com.s2s.mobile.config.SttConfig
@@ -9,11 +10,11 @@ import com.s2s.mobile.config.TtsConfig
 import com.s2s.mobile.config.VadConfig
 import com.s2s.mobile.pipeline.GenerationOverrides
 import com.s2s.mobile.pipeline.LlmBackend
-import com.s2s.mobile.pipeline.SttBackend
+import com.s2s.mobile.config.SttBackend
 import com.s2s.mobile.pipeline.ToolDefinition
 import com.s2s.mobile.pipeline.ToolParameter
 import com.s2s.mobile.pipeline.TtsBackend
-import com.s2s.mobile.pipeline.VadBackend
+import com.s2s.mobile.config.VadBackend
 
 object ConfigParser {
 
@@ -121,10 +122,7 @@ object ConfigParser {
       compactHistory = llmMap["compactHistory"] as? Boolean ?: true,
       reuseKvCache = llmMap["reuseKvCache"] as? Boolean ?: true,
       toolsEnabled = llmMap["toolsEnabled"] as? Boolean ?: false,
-      backend = when (llmMap["backend"] as? String) {
-        "LITERT" -> LlmBackend.LITERT
-        else -> LlmBackend.LLAMA_CPP
-      }
+      backend = LlmBackend.LLAMA_CPP
     ) else LlmConfig()
 
     val ttsMap = map["tts"] as? Map<String, Any?>
@@ -159,6 +157,27 @@ object ConfigParser {
       llm = llmConfig,
       tts = ttsConfig,
       warmUpOnInit = map["warmUpOnInit"] as? Boolean ?: true
+    )
+  }
+
+  fun parseModelDownloadConfig(map: Map<String, Any?>?): ModelDownloadConfig {
+    if (map == null) return ModelDownloadConfig()
+    return ModelDownloadConfig(
+      connectTimeoutMs = (map["connectTimeoutMs"] as? Number)?.toInt() ?: 30_000,
+      readTimeoutMs = (map["readTimeoutMs"] as? Number)?.toInt() ?: 120_000,
+      maxRedirects = (map["maxRedirects"] as? Number)?.toInt() ?: 5,
+      bufferSizeBytes = (map["bufferSizeBytes"] as? Number)?.toInt() ?: (1 shl 16),
+      userAgent = map["userAgent"] as? String ?: "S2S-Mobile-SDK/1.1",
+      huggingFaceTokenHosts = (map["huggingFaceTokenHosts"] as? List<*>)?.mapNotNull { it as? String }
+        ?: listOf("huggingface.co"),
+      modelsDirName = map["modelsDirName"] as? String ?: "models",
+      notificationChannelId = map["notificationChannelId"] as? String ?: "s2s_model_download_channel",
+      notificationChannelName = map["notificationChannelName"] as? String ?: "Model Downloads",
+      notificationChannelDescription = map["notificationChannelDescription"] as? String
+        ?: "Shows progress while model files are downloading",
+      notificationId = (map["notificationId"] as? Number)?.toInt() ?: 1001,
+      notificationIconRes = (map["notificationIconRes"] as? Number)?.toInt()
+        ?: android.R.drawable.stat_sys_download
     )
   }
 

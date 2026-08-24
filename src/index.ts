@@ -2,6 +2,7 @@ import {
   ChatMessage,
   GenerationOverrides,
   InstalledModelInfo,
+  ModelDownloadConfig,
   S2SConfig,
   S2SMobileModuleEvents,
   ToolDefinition,
@@ -127,8 +128,12 @@ export function getInstalledModelsAsync(): Promise<InstalledModelInfo[]> {
   return S2SMobileModule.getInstalledModelsAsync();
 }
 
-export function downloadModelsAsync(huggingFaceToken?: string): Promise<void> {
-  return S2SMobileModule.downloadModelsAsync(huggingFaceToken);
+export function downloadModelsAsync(
+  modelIds?: string[] | null,
+  huggingFaceToken?: string,
+  downloadConfig?: ModelDownloadConfig
+): Promise<void> {
+  return S2SMobileModule.downloadModelsAsync(modelIds, huggingFaceToken, downloadConfig);
 }
 
 export function useCustomModelRegistry(jsonString: string): void {

@@ -15,9 +15,9 @@ class S2SMobileModule : Module() {
   private val moduleScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
   private val eventBridge by lazy {
-    EventBridge(moduleScope) { eventName, payload ->
+    EventBridge(moduleScope, sendEvent = { eventName, payload ->
       sendEvent(eventName, payload)
-    }
+    })
   }
 
   private val toolBridge by lazy {
@@ -92,12 +92,17 @@ class S2SMobileModule : Module() {
       }
     }
 
-    AsyncFunction("downloadModelsAsync") { huggingFaceToken: String?, promise: Promise ->
+    AsyncFunction("downloadModelsAsync") { modelIds: List<String>?, huggingFaceToken: String?, downloadConfig: Map<String, Any?>?, promise: Promise ->
       moduleScope.launch {
         try {
           val context = appContext.reactContext
             ?: throw IllegalStateException("React Context unavailable")
-          downloadBridge.downloadModels(context, huggingFaceToken)
+          downloadBridge.downloadModels(
+            context,
+            modelIds,
+            huggingFaceToken,
+            ConfigParser.parseModelDownloadConfig(downloadConfig)
+          )
           promise.resolve(null)
         } catch (e: Throwable) {
           promise.reject("ERR_S2S_DOWNLOAD", e.message ?: "Failed to download model bundle", e)
@@ -204,7 +209,7 @@ class S2SMobileModule : Module() {
     }
 
     Function("unregisterTool") { name: String ->
-      engine?.unregisterTool(name)
+      engine?.tools?.unregister(name)
     }
 
     Function("resolveToolExecution") { callId: String, output: String, isError: Boolean? ->

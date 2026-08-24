@@ -15,6 +15,10 @@ function withS2SMobile(config) {
       'android.permission.RECORD_AUDIO',
       'android.permission.FOREGROUND_SERVICE',
       'android.permission.FOREGROUND_SERVICE_MICROPHONE',
+      // Required by ModelDownloadService's foreground service on Android 14+
+      // (API 34 hard-requires every foreground service type used at
+      // startForeground() to have a matching manifest declaration + permission).
+      'android.permission.FOREGROUND_SERVICE_DATA_SYNC',
       'android.permission.POST_NOTIFICATIONS',
       'android.permission.INTERNET',
     ];
@@ -40,20 +44,35 @@ function withS2SMobile(config) {
       application.service = [];
     }
 
-    const serviceName = 'com.s2s.mobile.audio.VoiceSessionService';
-    if (
-      !application.service.some(
-        (item) => item.$ && item.$['android:name'] === serviceName
-      )
-    ) {
-      application.service.push({
-        $: {
-          'android:name': serviceName,
-          'android:foregroundServiceType': 'microphone',
-          'android:exported': 'false',
-        },
-      });
-    }
+    const servicesNeeded = [
+      {
+        name: 'com.s2s.mobile.audio.VoiceSessionService',
+        foregroundServiceType: 'microphone',
+      },
+      {
+        // Runs model downloads in the background with a status-bar
+        // notification. Undeclared here means startForegroundService()
+        // against it throws at runtime — see ModelDownloadService.kt.
+        name: 'com.s2s.mobile.model.ModelDownloadService',
+        foregroundServiceType: 'dataSync',
+      },
+    ];
+
+    servicesNeeded.forEach(({ name, foregroundServiceType }) => {
+      if (
+        !application.service.some(
+          (item) => item.$ && item.$['android:name'] === name
+        )
+      ) {
+        application.service.push({
+          $: {
+            'android:name': name,
+            'android:foregroundServiceType': foregroundServiceType,
+            'android:exported': 'false',
+          },
+        });
+      }
+    });
 
     return config;
   });
