@@ -51,7 +51,7 @@ export function useS2SModelDownloader(): UseS2SModelDownloaderResult {
     setIsDownloading(true);
     setError(null);
     try {
-      await S2SMobileModule.downloadModelsAsync(huggingFaceToken);
+      await S2SMobileModule.downloadModelsAsync(null, huggingFaceToken);
       await refreshInstalledModels();
     } catch (err: any) {
       setError(err?.message || 'Model download failed');

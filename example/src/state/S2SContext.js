@@ -98,8 +98,8 @@ export const S2SProvider = ({ children }) => {
         logEvent('onError', message);
       }),
       addS2SListener('onModelDownloadProgress', (data) => {
-        setDownloadProgressData(prev => ({ ...prev, [data.specName]: data }));
-        logEvent('onModelDownloadProgress', `${data.specName} ${Math.round(data.percent)}% ${data.status}`);
+        setDownloadProgressData(prev => ({ ...prev, [data.modelName]: data }));
+        logEvent('onModelDownloadProgress', `${data.modelName} ${Math.round(data.percent)}% ${data.status}`);
       }),
       addS2SListener('onSpeechStarted', () => logEvent('onSpeechStarted', '')),
       addS2SListener('onSpeechEnded', () => logEvent('onSpeechEnded', '')),

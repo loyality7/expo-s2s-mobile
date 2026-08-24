@@ -92,12 +92,17 @@ class S2SMobileModule : Module() {
       }
     }
 
-    AsyncFunction("downloadModelsAsync") { modelIds: List<String>?, huggingFaceToken: String?, promise: Promise ->
+    AsyncFunction("downloadModelsAsync") { modelIds: List<String>?, huggingFaceToken: String?, downloadConfig: Map<String, Any?>?, promise: Promise ->
       moduleScope.launch {
         try {
           val context = appContext.reactContext
             ?: throw IllegalStateException("React Context unavailable")
-          downloadBridge.downloadModels(context, modelIds, huggingFaceToken)
+          downloadBridge.downloadModels(
+            context,
+            modelIds,
+            huggingFaceToken,
+            ConfigParser.parseModelDownloadConfig(downloadConfig)
+          )
           promise.resolve(null)
         } catch (e: Throwable) {
           promise.reject("ERR_S2S_DOWNLOAD", e.message ?: "Failed to download model bundle", e)

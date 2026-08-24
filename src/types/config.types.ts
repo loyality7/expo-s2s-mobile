@@ -10,7 +10,10 @@ export type SttBackend =
   | 'WHISPER'
   | 'CANARY';
 
-export type LlmBackend = 'LLAMA_CPP' | 'LITERT';
+// LiteRT-LM was removed from the SDK (its Kotlin metadata version requires
+// Kotlin 2.3.0+, which conflicts with the Kotlin version React Native itself
+// pins). LLAMA_CPP is the only backend the native bridge wires up.
+export type LlmBackend = 'LLAMA_CPP';
 
 export type TtsBackend = 'KOKORO' | 'VITS' | 'MATCHA' | 'KITTEN' | 'POCKET';
 
@@ -126,4 +129,19 @@ export interface S2SConfig {
   llm?: LlmConfig;
   tts?: TtsConfig;
   warmUpOnInit?: boolean;
+}
+
+export interface ModelDownloadConfig {
+  connectTimeoutMs?: number;
+  readTimeoutMs?: number;
+  maxRedirects?: number;
+  bufferSizeBytes?: number;
+  userAgent?: string;
+  huggingFaceTokenHosts?: string[];
+  modelsDirName?: string;
+  notificationChannelId?: string;
+  notificationChannelName?: string;
+  notificationChannelDescription?: string;
+  notificationId?: number;
+  notificationIconRes?: number;
 }

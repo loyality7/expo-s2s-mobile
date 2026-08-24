@@ -35,7 +35,7 @@ export const ModelSetupScreen = () => {
     const currentDl = dlValues.find(d => d.status === 'DOWNLOADING') || dlValues[dlValues.length - 1];
 
     if (currentDl) {
-      currentModelName = currentDl.specName || currentModelName;
+      currentModelName = currentDl.modelName || currentModelName;
       const pct = Math.round(currentDl.percent || 0);
       overallProgressText = `${pct}%`;
 
@@ -87,7 +87,7 @@ export const ModelSetupScreen = () => {
                       // Check for live download progress matching this model
                       const dlProgress = downloadProgressData[m.id] || 
                                          downloadProgressData[m.name] || 
-                                         Object.values(downloadProgressData).find(d => d.specName && d.specName.includes(m.id));
+                                         Object.values(downloadProgressData).find(d => d.modelName && d.modelName.includes(m.id));
 
                       const isDlActive = dlProgress && dlProgress.status === 'DOWNLOADING';
                       const dlPercent = dlProgress ? Math.round(dlProgress.percent || 0) : 0;
