@@ -38,6 +38,7 @@ class ModelDownloadBridge(
         "name" to info.spec.name,
         "isInstalled" to info.isInstalled,
         "diskUsageBytes" to info.diskUsageBytes,
+        "approxBytes" to info.spec.approxBytes,
         "path" to info.targetFile.absolutePath
       )
     }

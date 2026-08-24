@@ -28,5 +28,7 @@ export interface InstalledModelInfo {
   name: string;
   isInstalled: boolean;
   diskUsageBytes: number;
+  /** Registry-declared expected size, in bytes. Use this for a "251 MB" label before download. */
+  approxBytes: number;
   path: string;
 }
