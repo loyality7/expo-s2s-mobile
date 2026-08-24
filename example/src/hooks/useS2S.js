@@ -33,7 +33,7 @@ export const EngineInitState = {
  * the live voice state derived from native onStateChanged. This is the only
  * place that calls initializeAsync/start/stop/releaseAsync.
  */
-export function useS2S(config) {
+export function useS2S(baseConfig) {
   const [initState, setInitState] = useState(EngineInitState.NOT_STARTED);
   const [initError, setInitError] = useState(null);
   const [running, setRunning] = useState(false);
@@ -42,12 +42,16 @@ export function useS2S(config) {
   const [pausedReason, setPausedReason] = useState(null); // 'focus-lost' | null
   const initializedRef = useRef(false);
 
-  const initialize = useCallback(async () => {
+  // configOverride is passed explicitly at call time rather than read from a
+  // memoized/ref-captured value — a ref mutated right before calling this
+  // was one render behind, so initializeAsync silently ran with an empty
+  // ModelPaths and the native side failed with "model not found: /".
+  const initialize = useCallback(async (configOverride) => {
     if (initializedRef.current) return true;
     setInitState(EngineInitState.INITIALIZING);
     setInitError(null);
     try {
-      await initializeAsync(config);
+      await initializeAsync({ ...baseConfig, ...configOverride });
       initializedRef.current = true;
       setInitState(EngineInitState.READY);
       return true;
@@ -56,7 +60,7 @@ export function useS2S(config) {
       setInitState(EngineInitState.ERROR);
       return false;
     }
-  }, [config]);
+  }, [baseConfig]);
 
   useEffect(() => {
     const subs = [

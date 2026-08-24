@@ -13,7 +13,11 @@ const LABELS = {
 
 const SIZE = 104;
 
+const RUNNING_STATES = new Set([VoiceState.LISTENING, VoiceState.THINKING, VoiceState.SPEAKING]);
+
 export function VoiceOrb({ voiceState, onPress, disabled }) {
+  const isRunning = RUNNING_STATES.has(voiceState);
+  const a11yLabel = isRunning ? `${LABELS[voiceState]}. Tap to stop.` : LABELS[voiceState] || 'Voice control';
   const pulse = useRef(new Animated.Value(1)).current;
   const glow = useRef(new Animated.Value(0.5)).current;
 
@@ -67,7 +71,7 @@ export function VoiceOrb({ voiceState, onPress, disabled }) {
         onPress={onPress}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel={LABELS[voiceState] || 'Voice control'}
+        accessibilityLabel={a11yLabel}
         accessibilityState={{ disabled: !!disabled }}
         style={({ pressed }) => [
           styles.orb,
@@ -78,12 +82,14 @@ export function VoiceOrb({ voiceState, onPress, disabled }) {
         <View style={[styles.core, { backgroundColor: ringColor }]} />
       </Pressable>
       <Text style={typography.status}>{LABELS[voiceState] || ''}</Text>
+      {isRunning ? <Text style={[typography.caption, styles.hint]}>Tap to stop</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', gap: spacing.md },
+  hint: { marginTop: -spacing.sm },
   ring: {
     position: 'absolute',
     top: -12,

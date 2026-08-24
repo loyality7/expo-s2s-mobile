@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getInstalledModelsAsync } from 'expo-s2s-mobile';
 import { S2SContext } from './S2SContext';
-import { usePermissions, PermissionState } from '../hooks/usePermissions';
-import { useModelSetup, ModelSetupState } from '../hooks/useModelSetup';
-import { useS2S, EngineInitState } from '../hooks/useS2S';
+import { usePermissions } from '../hooks/usePermissions';
+import { useModelSetup } from '../hooks/useModelSetup';
+import { useS2S } from '../hooks/useS2S';
 import { useConversation } from '../hooks/useConversation';
-import { buildModelPaths } from '../services/modelService';
+import { buildEngineConfig } from '../services/modelService';
+import { getSelectedModelIds } from '../services/modelPreferences';
+import { getUserSettings } from '../services/settingsStore';
 
 export const AppState = {
   BOOTING: 'BOOTING',
@@ -19,9 +21,7 @@ export const AppState = {
   ERROR: 'ERROR',
 };
 
-const DEFAULT_CONFIG_EXTRAS = {
-  warmUpOnInit: true,
-};
+const BASE_CONFIG = { warmUpOnInit: true };
 
 /**
  * Owns the deterministic startup state machine. Never renders Chat before
@@ -31,17 +31,11 @@ const DEFAULT_CONFIG_EXTRAS = {
 export function S2SProvider({ children }) {
   const [appState, setAppState] = useState(AppState.BOOTING);
   const [bootError, setBootError] = useState(null);
-  const configOverrides = useRef({});
 
   const permissions = usePermissions();
   const modelSetup = useModelSetup();
   const conversation = useConversation();
-
-  const s2sConfig = useMemo(() => {
-    return { models: {}, ...DEFAULT_CONFIG_EXTRAS, ...configOverrides.current };
-  }, [appState]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const s2s = useS2S(s2sConfig);
+  const s2s = useS2S(BASE_CONFIG);
 
   const runStartup = useCallback(async () => {
     setBootError(null);
@@ -68,13 +62,25 @@ export function S2SProvider({ children }) {
     await proceedToEngineInit();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // modelPaths is computed here and passed straight into s2s.initialize() as
+  // an explicit argument — never stashed in a ref for initialize's own
+  // memoized closure to pick up later. That indirection was the actual bug:
+  // the ref was still empty on the render that mattered, so the engine
+  // silently initialized with blank ModelPaths ("model not found: /").
   const proceedToEngineInit = useCallback(async () => {
     setAppState(AppState.INITIALIZING_ENGINE);
     try {
-      const installed = await getInstalledModelsAsync();
-      const modelPaths = buildModelPaths(installed);
-      configOverrides.current = { models: modelPaths };
-      const ok = await s2s.initialize();
+      const [installed, preferredIds, userSettings] = await Promise.all([
+        getInstalledModelsAsync(),
+        getSelectedModelIds(),
+        getUserSettings(),
+      ]);
+      const engineConfig = buildEngineConfig(installed, preferredIds);
+      engineConfig.llm = { ...engineConfig.llm, ...userSettings.llm };
+      engineConfig.tts = { ...engineConfig.tts, ...userSettings.tts };
+      engineConfig.vad = { ...engineConfig.vad, ...userSettings.vad };
+      engineConfig.audio = { ...engineConfig.audio, ...userSettings.audio };
+      const ok = await s2s.initialize(engineConfig);
       if (!ok) {
         setAppState(AppState.ERROR);
         return;
@@ -109,6 +115,13 @@ export function S2SProvider({ children }) {
     runStartup();
   }, [runStartup]);
 
+  // Settings/model changes are init-time config on this SDK — there's no
+  // hot-swap path, so applying them means a real release + reinitialize.
+  const restartEngine = useCallback(async () => {
+    await s2s.release();
+    await proceedToEngineInit();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     runStartup();
     return () => {
@@ -126,6 +139,7 @@ export function S2SProvider({ children }) {
     requestPermission,
     startDownloadingModels,
     retry,
+    restartEngine,
   };
 
   return <S2SContext.Provider value={value}>{children}</S2SContext.Provider>;

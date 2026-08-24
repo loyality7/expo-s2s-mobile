@@ -6,6 +6,7 @@ import {
   getDefaultModelStackIds,
   getInstalledModelsAsync,
 } from 'expo-s2s-mobile';
+import { getSelectedModelIds } from '../services/modelPreferences';
 
 export const ModelSetupState = {
   CHECKING: 'CHECKING',
@@ -30,11 +31,19 @@ export function useModelSetup() {
     setState(ModelSetupState.CHECKING);
     setError(null);
     try {
-      const [defaultIds, installed] = await Promise.all([
+      const [defaultIds, installed, preferred] = await Promise.all([
         getDefaultModelStackIds(),
         getInstalledModelsAsync(),
+        getSelectedModelIds(),
       ]);
-      const required = installed.filter((m) => defaultIds.includes(m.id));
+      // A category with a user-chosen model uses that id instead of the
+      // default stack's — the user's pick is what actually needs to be
+      // installed before the app can proceed, not necessarily the default.
+      const requiredIds = defaultIds.map((id) => {
+        const cat = installed.find((m) => m.id === id)?.category;
+        return (cat && preferred[cat]) || id;
+      });
+      const required = installed.filter((m) => requiredIds.includes(m.id));
       setModels(
         required.map((m) => ({
           ...m,

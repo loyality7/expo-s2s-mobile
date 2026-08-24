@@ -30,5 +30,7 @@ export interface InstalledModelInfo {
   diskUsageBytes: number;
   /** Registry-declared expected size, in bytes. Use this for a "251 MB" label before download. */
   approxBytes: number;
+  /** The backend enum name (e.g. "MOONSHINE", "SILERO") this model file is built for. Null if the registry entry doesn't pin one. */
+  backend: string | null;
   path: string;
 }

@@ -6,6 +6,7 @@ import { PermissionScreen } from '../screens/PermissionScreen';
 import { ModelSetupScreen } from '../screens/ModelSetupScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { ModelsScreen } from '../screens/ModelsScreen';
 import { DiagnosticsScreen } from '../screens/DiagnosticsScreen';
 import { ErrorScreen } from '../screens/ErrorScreen';
 
@@ -14,8 +15,13 @@ import { ErrorScreen } from '../screens/ErrorScreen';
 // once READY. A stack library would add native linking risk for no benefit
 // over this simple, explicit switch.
 export function AppNavigator() {
-  const { appState, bootError, retry } = useS2SContext();
-  const [subScreen, setSubScreen] = useState(null); // null | 'settings' | 'diagnostics'
+  const { appState, bootError, retry, restartEngine } = useS2SContext();
+  const [subScreen, setSubScreen] = useState(null); // null | 'settings' | 'models' | 'diagnostics'
+
+  const handleRestartRequired = () => {
+    setSubScreen(null);
+    restartEngine();
+  };
 
   if (appState === AppState.MODELS_REQUIRED || appState === AppState.DOWNLOADING_MODELS) {
     return <ModelSetupScreen />;
@@ -35,12 +41,25 @@ export function AppNavigator() {
       />
     );
   }
-  if (appState === AppState.READY) {
+  if (appState === AppState.READY || appState === AppState.INITIALIZING_ENGINE) {
     if (subScreen === 'settings') {
-      return <SettingsScreen onBack={() => setSubScreen(null)} onOpenDiagnostics={() => setSubScreen('diagnostics')} />;
+      return (
+        <SettingsScreen
+          onBack={() => setSubScreen(null)}
+          onOpenModels={() => setSubScreen('models')}
+          onOpenDiagnostics={() => setSubScreen('diagnostics')}
+          onRestartRequired={handleRestartRequired}
+        />
+      );
+    }
+    if (subScreen === 'models') {
+      return <ModelsScreen onBack={() => setSubScreen('settings')} onRestartRequired={handleRestartRequired} />;
     }
     if (subScreen === 'diagnostics') {
       return <DiagnosticsScreen onBack={() => setSubScreen(null)} />;
+    }
+    if (appState === AppState.INITIALIZING_ENGINE) {
+      return <BootScreen appState={appState} />;
     }
     return <ChatScreen onOpenSettings={() => setSubScreen('settings')} />;
   }

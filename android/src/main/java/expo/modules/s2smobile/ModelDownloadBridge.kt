@@ -29,7 +29,7 @@ class ModelDownloadBridge(
     ModelRegistry.useDefaultRegistry()
   }
 
-  suspend fun getInstalledModels(context: Context): List<Map<String, Any>> {
+  suspend fun getInstalledModels(context: Context): List<Map<String, Any?>> {
     val modelsDir = File(context.getExternalFilesDir(null) ?: context.filesDir, "models")
     val downloader = ModelDownloader(modelsDir)
     val installed = downloader.getInstalledModels()
@@ -42,6 +42,7 @@ class ModelDownloadBridge(
         "isInstalled" to info.isInstalled,
         "diskUsageBytes" to info.diskUsageBytes,
         "approxBytes" to info.spec.approxBytes,
+        "backend" to info.spec.backend,
         "path" to info.targetFile.absolutePath
       )
     }
