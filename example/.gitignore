@@ -36,6 +36,11 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# build/debug artifacts that should never be committed
+bundle.js
+log.txt
+window_dump.xml
+
 # generated native folders
 /ios
 /android
