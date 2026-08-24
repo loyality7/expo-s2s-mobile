@@ -18,6 +18,9 @@ class ModelDownloadBridge(
 ) {
   private var activeDownloader: ModelDownloader? = null
 
+  /** The registry ids actually required for a working default engine — not the whole catalog. */
+  fun getDefaultModelStackIds(): List<String> = ModelRegistry.DEFAULT_STACK.map { it.id }
+
   fun useCustomRegistry(jsonString: String) {
     ModelRegistry.useRegistry(jsonString)
   }

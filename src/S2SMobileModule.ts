@@ -37,6 +37,7 @@ declare class S2SMobileModule extends NativeModule<S2SMobileModuleEvents> {
     huggingFaceToken?: string,
     downloadConfig?: ModelDownloadConfig
   ): Promise<void>;
+  getDefaultModelStackIds(): string[];
   useCustomModelRegistry(jsonString: string): void;
   useDefaultModelRegistry(): void;
   cancelModelDownload(): void;

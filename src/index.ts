@@ -136,6 +136,11 @@ export function downloadModelsAsync(
   return S2SMobileModule.downloadModelsAsync(modelIds, huggingFaceToken, downloadConfig);
 }
 
+/** The registry ids actually required for a working default engine. */
+export function getDefaultModelStackIds(): string[] {
+  return S2SMobileModule.getDefaultModelStackIds();
+}
+
 export function useCustomModelRegistry(jsonString: string): void {
   return S2SMobileModule.useCustomModelRegistry(jsonString);
 }

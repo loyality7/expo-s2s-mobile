@@ -3,6 +3,8 @@ import { PermissionsAndroid, PermissionStatus, Platform } from 'react-native';
 export interface S2SPermissionStatus {
   microphone: boolean;
   notifications: boolean;
+  /** True only after a request() call reports the user checked "don't ask again". */
+  microphoneBlocked?: boolean;
 }
 
 /**
@@ -49,9 +51,9 @@ export async function requestS2SPermissionsAsync(): Promise<S2SPermissionStatus>
       permissionsToRequest as any
     )) as any;
 
-  const micGranted =
-    results[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO] ===
-    PermissionsAndroid.RESULTS.GRANTED;
+  const micResult = results[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO];
+  const micGranted = micResult === PermissionsAndroid.RESULTS.GRANTED;
+  const micBlocked = micResult === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN;
 
   const notifGranted =
     Platform.Version < 33 ||
@@ -61,5 +63,6 @@ export async function requestS2SPermissionsAsync(): Promise<S2SPermissionStatus>
   return {
     microphone: micGranted,
     notifications: notifGranted,
+    microphoneBlocked: micBlocked,
   };
 }

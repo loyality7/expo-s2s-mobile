@@ -110,6 +110,10 @@ class S2SMobileModule : Module() {
       }
     }
 
+    Function("getDefaultModelStackIds") {
+      downloadBridge.getDefaultModelStackIds()
+    }
+
     Function("useCustomModelRegistry") { jsonString: String ->
       downloadBridge.useCustomRegistry(jsonString)
     }
