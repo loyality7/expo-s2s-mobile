@@ -1,2 +1,14 @@
-<manifest>
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Permissions the vendored engine needs that app.plugin.js does not already add
+  to the consuming app's manifest.
+
+  RECORD_AUDIO stays out deliberately: it is a runtime permission the app must
+  request and justify to the user, so it belongs in the app manifest where a
+  store reviewer sees it (app.plugin.js puts it there). Same reasoning the
+  engine's own manifest used.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 </manifest>

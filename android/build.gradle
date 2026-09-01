@@ -30,7 +30,24 @@ android {
 }
 
 dependencies {
-  implementation 'com.github.loyality7:speech-to-speech-mobile:1.0.3'
+  // The engine is VENDORED as source under src/main/java/com/s2s, not resolved
+  // as an artifact. It used to be
+  // `com.github.loyality7:speech-to-speech-mobile:1.0.3`; the source below is
+  // that exact tag, copied in verbatim. What follows are therefore the
+  // dependencies that release declared for itself.
+
+  // sherpa-onnx: Silero VAD + streaming Zipformer STT + Kokoro/Piper TTS.
+  // `api`, not `implementation`: the engine exposes sherpa types on its public
+  // surface, so consumers need them on the compile classpath.
+  api 'com.github.k2-fsa.sherpa-onnx:sherpa-onnx:v1.13.5'
+
+  // llama.cpp runtime for on-device LLM generation.
+  api 'com.llamatik:library:1.7.0'
+
+  // Archive extraction for bzip2 model archives (HuggingFaceDownloader).
+  implementation 'org.apache.commons:commons-compress:1.26.2'
+
+  implementation 'androidx.core:core-ktx:1.12.0'
   implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
   implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
 
