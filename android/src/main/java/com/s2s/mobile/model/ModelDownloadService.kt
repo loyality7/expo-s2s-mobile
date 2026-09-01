@@ -1,0 +1,150 @@
+package com.s2s.mobile.model
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.os.Binder
+import android.os.Build
+import android.os.IBinder
+import android.util.Log
+import androidx.core.app.NotificationCompat
+import com.s2s.mobile.config.ModelDownloadConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.io.File
+
+/**
+ * Foreground Service to ensure model downloads continue reliably in the background
+ * even when the app is minimized, screen is locked, or another app is opened.
+ */
+class ModelDownloadService : Service() {
+
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val binder = LocalBinder()
+
+    private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
+    val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
+
+    private var downloader: ModelDownloader? = null
+    private var config: ModelDownloadConfig = ModelDownloadConfig()
+
+    /** Held so a second startDownload can be refused rather than orphaning the first. */
+    private var job: Job? = null
+
+    inner class LocalBinder : Binder() {
+        fun getService(): ModelDownloadService = this@ModelDownloadService
+    }
+
+    override fun onBind(intent: Intent?): IBinder = binder
+
+    fun startDownload(
+        modelsDir: File,
+        specs: List<ModelSpec>,
+        config: ModelDownloadConfig = ModelDownloadConfig(),
+    ) {
+        // Two runs would write the same .part files and the second would replace the
+        // downloader reference, leaving the first uncancellable. One at a time.
+        if (job?.isActive == true) {
+            Log.i(TAG, "download already in progress, ignoring start request")
+            return
+        }
+
+        this.config = config
+        createNotificationChannel()
+        val downloader = ModelDownloader(modelsDir, S2SModels.huggingFaceToken(this), config)
+            .also { this.downloader = it }
+
+        val notification = buildNotification("Starting download...", 0)
+        startForeground(config.notificationId, notification)
+
+        job = serviceScope.launch {
+            try {
+                downloader.downloadAll(specs) { p ->
+                    _downloadState.value = DownloadState.Progress(p)
+                    val action = when (p.status) {
+                        ModelProgress.Status.PRECHECK -> "Preparing"
+                        ModelProgress.Status.DOWNLOADING -> "Downloading"
+                        ModelProgress.Status.VERIFYING -> "Verifying"
+                        ModelProgress.Status.EXTRACTING -> "Extracting"
+                        ModelProgress.Status.COMPLETED -> "Completed"
+                        ModelProgress.Status.FAILED -> "Failed"
+                    }
+                    updateNotification(
+                        title = "$action ${p.modelName}",
+                        progress = p.percent,
+                    )
+                }
+                _downloadState.value = DownloadState.Completed
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            } catch (e: Exception) {
+                _downloadState.value = DownloadState.Error(e.message ?: "Download failed")
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
+        }
+    }
+
+    fun stopDownload() {
+        downloader?.cancelDownload()
+        job?.cancel()
+        job = null
+        _downloadState.value = DownloadState.Idle
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                config.notificationChannelId,
+                config.notificationChannelName,
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
+                description = config.notificationChannelDescription
+            }
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun buildNotification(title: String, progress: Int): Notification {
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            launchIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        return NotificationCompat.Builder(this, config.notificationChannelId)
+            .setContentTitle("S2S Model Manager")
+            .setContentText(title)
+            .setSmallIcon(config.notificationIconRes)
+            .setProgress(100, progress, false)
+            .setOngoing(true)
+            .setContentIntent(pendingIntent)
+            .build()
+    }
+
+    private fun updateNotification(title: String, progress: Int) {
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(config.notificationId, buildNotification(title, progress))
+    }
+
+    companion object {
+        private const val TAG = "S2S-DownloadService"
+    }
+}
